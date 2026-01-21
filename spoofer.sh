@@ -59,7 +59,7 @@ case $option in
         available_ifaces=$(ip -o link show | awk -F': ' '$2 != "lo" {print $2}')
         
         for iface in $available_ifaces; do
-            current_mac=$(cat /sys/class/net/$iface/address)
+            current_mac=$(cat /sys/class/net/"$iface"/address)
             echo -e " -> ${bold}$iface${NC} \t[Current: $current_mac]"
         done
         echo ""
@@ -74,7 +74,7 @@ case $option in
         echo -e "\n${dim}[*] Generating random MAC...${NC}"
 
         rand_hex=$(od -An -N5 -t x1 /dev/urandom | tr -d ' ')
-        suffix=$(echo $rand_hex | sed 's/.\{2\}/&:/g' | sed 's/:$//')
+        suffix=$(echo "$rand_hex" | sed 's/.\{2\}/&:/g' | sed 's/:$//')
         new_mac="02:$suffix"
         
         echo -e "${dim}[*] Target MAC: ${white}$new_mac${NC}"
