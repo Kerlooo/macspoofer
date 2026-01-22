@@ -42,7 +42,7 @@
 
 ## Available options:
 - [X] Random MAC Address 
-- [x] **Manual Mode
+- [x] Manual Mode
 
 ## How it Works 
 The script interacts directly with the Linux kernel via the ip command.
