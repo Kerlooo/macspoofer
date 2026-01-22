@@ -42,6 +42,7 @@
 
 ## Available options:
 - [X] Random MAC Address 
+- [x] **Manual Mode
 
 ## How it Works 
 The script interacts directly with the Linux kernel via the ip command.
@@ -52,7 +53,7 @@ Current development status and planned features:
 
 - [x] **Random MAC Generator:** Fully functional with safe bit handling (unicast/local).
 - [x] **Dependency Free:** Zero external tools required, pure Bash implementation.
-- [ ] **Manual Mode:** Implement custom MAC input with regex format validation.
+- [x] **Manual Mode:** Implement custom MAC input with regex format validation.
 - [ ] **Restore Function:** Option to revert to the original hardware address without rebooting.
 - [ ] **CLI Arguments:** Support non-interactive mode (e.g., `./spoofer.sh --random wlan0`) for automation.
 - [ ] **Persistence:** Systemd service integration to spoof address at boot.
@@ -67,4 +68,4 @@ This guide is distributed under the **Creative Commons Attribution 4.0 Internati
 **Under the following terms:**
 - **Attribution** — You must give appropriate credit, provide a link to the license, and indicate if changes were made.
 
-For more details, see the [LICENSE](LICENSE) file or visit [creativecommons.org](https://creativecommons.org/licenses/by/4.0/).
+For more details, see the [LICENSE](../LICENSE) file or visit [creativecommons.org](https://creativecommons.org/licenses/by/4.0/).
