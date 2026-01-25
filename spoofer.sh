@@ -14,6 +14,8 @@ NC="\033[0m"
 bold="\033[1m"
 dim="\033[2m"
 
+INSTALL_PATH="/usr/local/bin/macspoofer"
+
 show_banner() {
     clear
     echo -e "${error}"
@@ -46,10 +48,11 @@ echo -e "${white}"
 echo -e "[1] Random MAC Address"
 echo -e " └─ [2] Manual MAC Address"
 echo -e "     └─ [3] Restore MAC Address"
-echo -e "         └─ [4] Credits"
-echo -e "             └─ [5] Exit"
+echo -e "         └─ [4] Install macspoofer"
+echo -e "             └─ [5] Credits"
+echo -e "                 └─ [6] Exit"
 echo -e ""
-read -r -p "Select option [1-5]: " option
+read -r -p "Select option [1-6]: " option
 
 case "${option}" in
     1)
@@ -91,7 +94,6 @@ case "${option}" in
             ip link show "${interface}" | awk '/link\/ether/ {print "MAC: " $2}'
         else
             echo -e "${error}[-] Failed to change MAC address.${NC}"
-            echo -e "${dim}Possible reasons: Driver doesn't support spoofing or permission denied.${NC}"
             ip link set dev "${interface}" up
         fi
         ;;
@@ -145,11 +147,27 @@ case "${option}" in
         ;;
 
     3)
-        echo -e "${error}Restore MAC Address isn't implemented yet.${NC}"
+        echo -e "Restore MAC Address is not implemented yet."
+        exit 0
+        ;;
+        
+    4)
+        show_banner
+        echo -e "${white}--- Installing macspoofer ---${NC}\n"
+
+        cp "$0" "${INSTALL_PATH}" || {
+            echo -e "${error}[-] Failed to copy script.${NC}"
+            exit 1
+        }
+
+        chmod +x "${INSTALL_PATH}"
+
+        echo -e "${working}[+] Installed successfully!${NC}"
+        echo -e "${dim}You can now run:${NC} ${bold}macspoofer${NC}"
         read -r -p "Press Enter to exit..."
         ;;
 
-    4)
+    5)
         show_banner
         echo -e "${white}--- Credits ---${NC}\n"
         echo -e "${bold}Developer:${NC} ${white}kerlo https://github.com/Kerlooo${NC}"
@@ -158,12 +176,13 @@ case "${option}" in
         read -r -p "Press Enter to exit..."
         ;;
 
-    5)
+    6)
         echo -e "Thank you for using ${bold}macspoofer${NC}!"
         exit 0
         ;;
 
     *)
         echo -e "${error}Invalid option.${NC}"
+        exit 0
         ;;
 esac

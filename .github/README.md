@@ -41,8 +41,9 @@
 ---
 
 ## Available options:
-- [X] Random MAC Address 
+- [x] Random MAC Address 
 - [x] Manual Mode
+- [x] Install as command
 
 ## How it Works 
 The script interacts directly with the Linux kernel via the ip command.
