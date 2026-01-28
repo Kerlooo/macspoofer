@@ -20,6 +20,14 @@
 * **Safe Randomization:** Automatically handles the "Locally Administered" and "Unicast" bits (sets the first byte to `02`) to ensure the generated MAC address is valid and accepted by drivers.
 * **Transparent:** The code is minimal and easy to audit, unlike complex compiled binaries.
 
+## Supported distros
+- Arch Linux (and derivatives: Manjaro, EndeavourOS)
+- Debian / Ubuntu (and derivatives: Linux Mint, Pop!_OS)
+- Fedora
+- openSUSE
+- Kali Linux
+- Void Linux
+
 ## Usage
 1. Clone the repository:
     ```bash
