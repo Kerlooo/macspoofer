@@ -37,6 +37,51 @@ EOF
     echo -e "${white}"
 }
 
+list_ifaces() {
+    echo -e "${alert}Available Network Interfaces:${NC}"
+
+    local available_ifaces iface current_mac
+    available_ifaces="$(ip -o link show | awk -F': ' '$2 != "lo" {print $2}')"
+
+    for iface in ${available_ifaces}; do
+        current_mac="$(cat "/sys/class/net/${iface}/address")"
+        echo -e " -> ${bold}${iface}${NC} \t[Current: ${current_mac}]"
+    done
+    echo ""
+}
+
+# Sets the global variable "interface"
+select_iface() {
+    list_ifaces
+
+    read -r -p "Select your network interface: " interface
+
+    if [ ! -d "/sys/class/net/${interface}" ]; then
+        echo -e "\n${error}[!] Error: Interface '${interface}' not found.${NC}"
+        exit 1
+    fi
+}
+
+apply_mac() {
+    local iface="$1"
+    local new_mac="$2"
+
+    echo -e "${dim}[*] Target MAC: ${white}${new_mac}${NC}"
+    echo -e "${dim}[*] Taking interface down...${NC}"
+    ip link set dev "${iface}" down
+
+    echo -e "${dim}[*] Applying new MAC address...${NC}"
+    if ip link set dev "${iface}" address "${new_mac}"; then
+        ip link set dev "${iface}" up
+        echo -e "${working}[+] Success! Interface is back up.${NC}"
+        echo -e "\n${bold}New Configuration for ${iface}:${NC}"
+        ip link show "${iface}" | awk '/link\/ether/ {print "MAC: " $2}'
+    else
+        echo -e "${error}[-] Failed to change MAC address.${NC}"
+        ip link set dev "${iface}" up
+    fi
+}
+
 show_banner
 
 echo ""
@@ -59,22 +104,7 @@ case "${option}" in
         show_banner
         echo -e "${white}--- Random MAC Address Generator ---${NC}\n"
 
-        echo -e "${alert}Available Network Interfaces:${NC}"
-
-        available_ifaces="$(ip -o link show | awk -F': ' '$2 != "lo" {print $2}')"
-
-        for iface in ${available_ifaces}; do
-            current_mac="$(cat "/sys/class/net/${iface}/address")"
-            echo -e " -> ${bold}${iface}${NC} \t[Current: ${current_mac}]"
-        done
-        echo ""
-
-        read -r -p "Select your network interface: " interface
-
-        if [ ! -d "/sys/class/net/${interface}" ]; then
-            echo -e "\n${error}[!] Error: Interface '${interface}' not found.${NC}"
-            exit 1
-        fi
+        select_iface
 
         echo -e "\n${dim}[*] Generating random MAC...${NC}"
 
@@ -82,42 +112,14 @@ case "${option}" in
         suffix="$(echo "${rand_hex}" | sed 's/.\{2\}/&:/g' | sed 's/:$//')"
         new_mac="02:${suffix}"
 
-        echo -e "${dim}[*] Target MAC: ${white}${new_mac}${NC}"
-        echo -e "${dim}[*] Taking interface down...${NC}"
-        ip link set dev "${interface}" down
-
-        echo -e "${dim}[*] Applying new MAC address...${NC}"
-        if ip link set dev "${interface}" address "${new_mac}"; then
-            ip link set dev "${interface}" up
-            echo -e "${working}[+] Success! Interface is back up.${NC}"
-            echo -e "\n${bold}New Configuration for ${interface}:${NC}"
-            ip link show "${interface}" | awk '/link\/ether/ {print "MAC: " $2}'
-        else
-            echo -e "${error}[-] Failed to change MAC address.${NC}"
-            ip link set dev "${interface}" up
-        fi
+        apply_mac "${interface}" "${new_mac}"
         ;;
 
     2)
         show_banner
         echo -e "${white}--- Manual MAC Address Configuration ---${NC}\n"
 
-        echo -e "${alert}Available Network Interfaces:${NC}"
-
-        available_ifaces="$(ip -o link show | awk -F': ' '$2 != "lo" {print $2}')"
-
-        for iface in ${available_ifaces}; do
-            current_mac="$(cat "/sys/class/net/${iface}/address")"
-            echo -e " -> ${bold}${iface}${NC} \t[Current: ${current_mac}]"
-        done
-        echo ""
-
-        read -r -p "Select your network interface: " interface
-
-        if [ ! -d "/sys/class/net/${interface}" ]; then
-            echo -e "\n${error}[!] Error: Interface '${interface}' not found.${NC}"
-            exit 1
-        fi
+        select_iface
 
         echo -e "\n${dim}Enter MAC address suffix (format: XX:XX:XX:XX:XX)${NC}"
         echo -e "${dim}The full MAC will be: 02:XX:XX:XX:XX:XX${NC}"
@@ -128,22 +130,8 @@ case "${option}" in
             exit 1
         fi
 
-        new_mac="02:${mac_suffix}"
-
-        echo -e "\n${dim}[*] Target MAC: ${white}${new_mac}${NC}"
-        echo -e "${dim}[*] Taking interface down...${NC}"
-        ip link set dev "${interface}" down
-
-        echo -e "${dim}[*] Applying new MAC address...${NC}"
-        if ip link set dev "${interface}" address "${new_mac}"; then
-            ip link set dev "${interface}" up
-            echo -e "${working}[+] Success! Interface is back up.${NC}"
-            echo -e "\n${bold}New Configuration for ${interface}:${NC}"
-            ip link show "${interface}" | awk '/link\/ether/ {print "MAC: " $2}'
-        else
-            echo -e "${error}[-] Failed to change MAC address.${NC}"
-            ip link set dev "${interface}" up
-        fi
+        echo ""
+        apply_mac "${interface}" "02:${mac_suffix}"
         ;;
 
     3)
