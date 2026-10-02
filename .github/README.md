@@ -50,6 +50,7 @@
 
 ## Available options:
 - [x] Random MAC Address 
+- [x] Vendor MAC Address
 - [x] Manual Mode
 - [x] Restore original MAC Address
 - [x] Install as command
@@ -57,6 +58,8 @@
 ## How it Works 
 The script interacts directly with the Linux kernel via the ip command.
 For random generation, it reads raw bytes from /dev/urandom. To prevent connectivity issues, the script ensures the first octet follows IEEE 802 standards for local addresses (setting the second least significant bit to 1), resulting in a prefix like 02, 06, 0A, or 0E.
+
+Vendor mode picks a random real OUI (the first 3 bytes, assigned by IEEE to a manufacturer) of the selected vendor from the embedded database and randomizes the last 3 bytes. The resulting address looks like a genuine device of that vendor (e.g. an Intel or Apple network card) instead of a locally administered one, which some networks flag as randomized.
 
 Before the first change, the original MAC of the interface is saved in `/var/lib/macspoofer/<interface>`. The Restore option looks for the original address in this order:
 1. The `permaddr` reported by the kernel (`ip link show`), shown when the current MAC differs from the hardware one.
@@ -77,6 +80,7 @@ Current development status and planned features:
 
 - [x] **Random MAC Generator:** Fully functional with safe bit handling (unicast/local).
 - [x] **Dependency Free:** Zero external tools required, pure Bash implementation.
+- [x] **Vendor Mode:** Random MAC address with a real vendor prefix (OUI) from an embedded database.
 - [x] **Manual Mode:** Implement custom MAC input with regex format validation.
 - [x] **Restore Function:** Option to revert to the original hardware address without rebooting.
 - [ ] **CLI Arguments:** Support non-interactive mode (e.g., `./spoofer.sh --random wlan0`) for automation.

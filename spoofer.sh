@@ -116,6 +116,32 @@ get_original_mac() {
     fi
 }
 
+# Prints the embedded OUI database, one "<OUI> <Vendor>" per line
+get_oui_data() {
+    awk '/^__OUI_DATA__$/ {f = 1; next} /^__OUI_END__$/ {f = 0} f' "$0"
+}
+
+# Prints a random OUI of the given vendor
+random_oui() {
+    local vendor="$1"
+    local ouis index
+
+    mapfile -t ouis < <(get_oui_data | awk -v vendor="${vendor}" '$2 == vendor {print $1}')
+    index=$(( $(od -An -N4 -t u4 /dev/urandom) % ${#ouis[@]} ))
+    echo "${ouis[${index}]}"
+}
+
+# Prints n random bytes as hex digits
+random_hex() {
+    od -An -N"$1" -t x1 /dev/urandom | tr -d ' \n'
+}
+
+# Formats 12 hex digits as a MAC address (70A6CC4927B7 -> 70:a6:cc:49:27:b7)
+format_mac() {
+    local hex="${1,,}"
+    echo "${hex}" | sed 's/.\{2\}/&:/g; s/:$//'
+}
+
 show_banner
 
 echo ""
@@ -125,13 +151,14 @@ echo -e "${dim}User: ${white}${USER}${NC}"
 
 echo -e "${white}"
 echo -e "[1] Random MAC Address"
-echo -e " └─ [2] Manual MAC Address"
-echo -e "     └─ [3] Restore MAC Address"
-echo -e "         └─ [4] Install macspoofer"
-echo -e "             └─ [5] Credits"
-echo -e "                 └─ [6] Exit"
+echo -e " └─ [2] Vendor MAC Address"
+echo -e "     └─ [3] Manual MAC Address"
+echo -e "         └─ [4] Restore MAC Address"
+echo -e "             └─ [5] Install macspoofer"
+echo -e "                 └─ [6] Credits"
+echo -e "                     └─ [7] Exit"
 echo -e ""
-read -r -p "Select option [1-6]: " option
+read -r -p "Select option [1-7]: " option
 
 case "${option}" in
     1)
@@ -142,15 +169,43 @@ case "${option}" in
 
         echo -e "\n${dim}[*] Generating random MAC...${NC}"
 
-        rand_hex="$(od -An -N5 -t x1 /dev/urandom | tr -d ' ')"
-        suffix="$(echo "${rand_hex}" | sed 's/.\{2\}/&:/g' | sed 's/:$//')"
-        new_mac="02:${suffix}"
+        new_mac="$(format_mac "02$(random_hex 5)")"
 
         save_original_mac "${interface}"
         apply_mac "${interface}" "${new_mac}"
         ;;
 
     2)
+        show_banner
+        echo -e "${white}--- Vendor MAC Address Generator ---${NC}\n"
+
+        select_iface
+
+        mapfile -t vendors < <(get_oui_data | awk '{print $2}' | uniq)
+
+        echo -e "\n${alert}Available Vendors:${NC}"
+        for i in "${!vendors[@]}"; do
+            echo -e " [$((i + 1))] ${vendors[${i}]}"
+        done
+        echo ""
+
+        read -r -p "Select vendor [1-${#vendors[@]}]: " vendor_choice
+
+        if ! [[ "${vendor_choice}" =~ ^[0-9]+$ ]] || (( 10#${vendor_choice} < 1 || 10#${vendor_choice} > ${#vendors[@]} )); then
+            echo -e "\n${error}[!] Error: Invalid vendor.${NC}"
+            exit 1
+        fi
+
+        vendor="${vendors[$(( 10#${vendor_choice} - 1 ))]}"
+        oui="$(random_oui "${vendor}")"
+        new_mac="$(format_mac "${oui}$(random_hex 3)")"
+
+        echo -e "\n${dim}[*] Vendor: ${white}${vendor}${dim} (OUI ${oui})${NC}"
+        save_original_mac "${interface}"
+        apply_mac "${interface}" "${new_mac}"
+        ;;
+
+    3)
         show_banner
         echo -e "${white}--- Manual MAC Address Configuration ---${NC}\n"
 
@@ -170,7 +225,7 @@ case "${option}" in
         apply_mac "${interface}" "02:${mac_suffix}"
         ;;
 
-    3)
+    4)
         show_banner
         echo -e "${white}--- Restore Original MAC Address ---${NC}\n"
 
@@ -196,7 +251,7 @@ case "${option}" in
         fi
         ;;
         
-    4)
+    5)
         show_banner
         echo -e "${white}--- Installing macspoofer ---${NC}\n"
 
@@ -212,7 +267,7 @@ case "${option}" in
         read -r -p "Press Enter to exit..."
         ;;
 
-    5)
+    6)
         show_banner
         echo -e "${white}--- Credits ---${NC}\n"
         echo -e "${bold}Developer:${NC} ${white}kerlo https://github.com/Kerlooo${NC}"
@@ -221,7 +276,7 @@ case "${option}" in
         read -r -p "Press Enter to exit..."
         ;;
 
-    6)
+    7)
         echo -e "Thank you for using ${bold}macspoofer${NC}!"
         exit 0
         ;;
