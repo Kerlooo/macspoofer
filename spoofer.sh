@@ -183,21 +183,47 @@ case "${option}" in
 
         mapfile -t vendors < <(get_oui_data | awk '{print $2}' | uniq)
 
+        # OUI of the original MAC, offered only if it is a real (globally administered) one
+        own_oui=""
+        original_mac="$(get_original_mac "${interface}")"
+        original_hex="${original_mac//:/}"
+        if [ -n "${original_hex}" ] && (( (0x${original_hex:0:2} & 0x02) == 0 )); then
+            own_oui="${original_hex:0:6}"
+            own_oui="${own_oui^^}"
+            own_vendor="$(get_oui_data | awk -v oui="${own_oui}" '$1 == oui {print $2; exit}')"
+            own_vendor="${own_vendor:-Unknown}"
+        fi
+
         echo -e "\n${alert}Available Vendors:${NC}"
+        if [ -n "${own_oui}" ]; then
+            echo -e " [0] Keep current vendor (${own_vendor}, OUI ${own_oui})"
+        fi
         for i in "${!vendors[@]}"; do
             echo -e " [$((i + 1))] ${vendors[${i}]}"
         done
         echo ""
 
-        read -r -p "Select vendor [1-${#vendors[@]}]: " vendor_choice
+        first_choice=1
+        [ -n "${own_oui}" ] && first_choice=0
+        read -r -p "Select vendor [${first_choice}-${#vendors[@]}]: " vendor_choice
 
-        if ! [[ "${vendor_choice}" =~ ^[0-9]+$ ]] || (( 10#${vendor_choice} < 1 || 10#${vendor_choice} > ${#vendors[@]} )); then
+        if ! [[ "${vendor_choice}" =~ ^[0-9]+$ ]]; then
+            echo -e "\n${error}[!] Error: Invalid vendor.${NC}"
+            exit 1
+        fi
+        vendor_choice="$(( 10#${vendor_choice} ))"
+
+        if (( vendor_choice == 0 )) && [ -n "${own_oui}" ]; then
+            vendor="${own_vendor}"
+            oui="${own_oui}"
+        elif (( vendor_choice >= 1 && vendor_choice <= ${#vendors[@]} )); then
+            vendor="${vendors[$(( vendor_choice - 1 ))]}"
+            oui="$(random_oui "${vendor}")"
+        else
             echo -e "\n${error}[!] Error: Invalid vendor.${NC}"
             exit 1
         fi
 
-        vendor="${vendors[$(( 10#${vendor_choice} - 1 ))]}"
-        oui="$(random_oui "${vendor}")"
         new_mac="$(format_mac "${oui}$(random_hex 3)")"
 
         echo -e "\n${dim}[*] Vendor: ${white}${vendor}${dim} (OUI ${oui})${NC}"
