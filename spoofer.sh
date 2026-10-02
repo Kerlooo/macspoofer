@@ -57,6 +57,11 @@ select_iface() {
 
     read -r -p "Select your network interface: " interface
 
+    if [ -z "${interface}" ]; then
+        echo -e "\n${error}[!] Error: No interface selected.${NC}"
+        exit 1
+    fi
+
     if [ ! -d "/sys/class/net/${interface}" ]; then
         echo -e "\n${error}[!] Error: Interface '${interface}' not found.${NC}"
         exit 1
