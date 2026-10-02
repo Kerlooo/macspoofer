@@ -15,6 +15,7 @@ bold="\033[1m"
 dim="\033[2m"
 
 INSTALL_PATH="/usr/local/bin/macspoofer"
+STATE_DIR="/var/lib/macspoofer"
 
 show_banner() {
     clear
@@ -79,6 +80,39 @@ apply_mac() {
     else
         echo -e "${error}[-] Failed to change MAC address.${NC}"
         ip link set dev "${iface}" up
+        return 1
+    fi
+}
+
+# Saves the current MAC of an interface, only if not already saved
+save_original_mac() {
+    local iface="$1"
+    local state_file="${STATE_DIR}/${iface}"
+
+    [ -f "${state_file}" ] && return 0
+
+    mkdir -p "${STATE_DIR}"
+    cat "/sys/class/net/${iface}/address" > "${state_file}"
+}
+
+# Prints the original MAC of an interface, or nothing if unknown
+get_original_mac() {
+    local iface="$1"
+    local state_file="${STATE_DIR}/${iface}"
+    local perm_mac current_mac
+    current_mac="$(cat "/sys/class/net/${iface}/address")"
+
+    # Kernel exposes "permaddr" when the current MAC differs from the hardware one
+    perm_mac="$(ip link show dev "${iface}" | awk '{for (i = 1; i < NF; i++) if ($i == "permaddr") print $(i + 1)}')"
+    if [ -n "${perm_mac}" ]; then
+        echo "${perm_mac}"
+    elif [ -f "${state_file}" ]; then
+        cat "${state_file}"
+    elif [ "$(cat "/sys/class/net/${iface}/addr_assign_type")" = "0" ]; then
+        echo "${current_mac}"
+    elif (( (0x${current_mac:0:2} & 0x02) == 0 )); then
+        # Globally administered (vendor) address: spoofed ones are always local
+        echo "${current_mac}"
     fi
 }
 
@@ -112,6 +146,7 @@ case "${option}" in
         suffix="$(echo "${rand_hex}" | sed 's/.\{2\}/&:/g' | sed 's/:$//')"
         new_mac="02:${suffix}"
 
+        save_original_mac "${interface}"
         apply_mac "${interface}" "${new_mac}"
         ;;
 
@@ -131,12 +166,34 @@ case "${option}" in
         fi
 
         echo ""
+        save_original_mac "${interface}"
         apply_mac "${interface}" "02:${mac_suffix}"
         ;;
 
     3)
-        echo -e "Restore MAC Address is not implemented yet."
-        exit 0
+        show_banner
+        echo -e "${white}--- Restore Original MAC Address ---${NC}\n"
+
+        select_iface
+
+        original_mac="$(get_original_mac "${interface}")"
+        current_mac="$(cat "/sys/class/net/${interface}/address")"
+
+        if [ -z "${original_mac}" ]; then
+            echo -e "\n${error}[!] Error: Original MAC address of '${interface}' is unknown.${NC}"
+            exit 1
+        fi
+
+        if [ "${original_mac,,}" = "${current_mac,,}" ]; then
+            echo -e "\n${working}[+] '${interface}' is already using its original MAC address (${original_mac}).${NC}"
+            rm -f "${STATE_DIR}/${interface}"
+            exit 0
+        fi
+
+        echo ""
+        if apply_mac "${interface}" "${original_mac}"; then
+            rm -f "${STATE_DIR}/${interface}"
+        fi
         ;;
         
     4)

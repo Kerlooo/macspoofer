@@ -51,11 +51,17 @@
 ## Available options:
 - [x] Random MAC Address 
 - [x] Manual Mode
+- [x] Restore original MAC Address
 - [x] Install as command
 
 ## How it Works 
 The script interacts directly with the Linux kernel via the ip command.
 For random generation, it reads raw bytes from /dev/urandom. To prevent connectivity issues, the script ensures the first octet follows IEEE 802 standards for local addresses (setting the second least significant bit to 1), resulting in a prefix like 02, 06, 0A, or 0E.
+
+Before the first change, the original MAC of the interface is saved in `/var/lib/macspoofer/<interface>`. The Restore option looks for the original address in this order:
+1. The `permaddr` reported by the kernel (`ip link show`), shown when the current MAC differs from the hardware one.
+2. The address saved in `/var/lib/macspoofer/<interface>`.
+3. The current address, if it is already the permanent/vendor one.
 
 ## Roadmap
 Current development status and planned features:
@@ -63,7 +69,7 @@ Current development status and planned features:
 - [x] **Random MAC Generator:** Fully functional with safe bit handling (unicast/local).
 - [x] **Dependency Free:** Zero external tools required, pure Bash implementation.
 - [x] **Manual Mode:** Implement custom MAC input with regex format validation.
-- [ ] **Restore Function:** Option to revert to the original hardware address without rebooting.
+- [x] **Restore Function:** Option to revert to the original hardware address without rebooting.
 - [ ] **CLI Arguments:** Support non-interactive mode (e.g., `./spoofer.sh --random wlan0`) for automation.
 - [ ] **Persistence:** Systemd service integration to spoof address at boot.
 
