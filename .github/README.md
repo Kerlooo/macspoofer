@@ -63,6 +63,15 @@ Before the first change, the original MAC of the interface is saved in `/var/lib
 2. The address saved in `/var/lib/macspoofer/<interface>`.
 3. The current address, if it is already the permanent/vendor one.
 
+## Vendor Database
+`spoofer.sh` embeds a small OUI database (vendor prefixes) at the end of the file, so it stays a single dependency-free script. It only contains common consumer network hardware vendors (Apple, Intel, Samsung, Huawei, Xiaomi, TP-Link, Dell, HP, ...), taken from the official [IEEE MA-L registry](https://standards-oui.ieee.org/oui/oui.txt).
+
+To update it (maintainers only, requires `curl`):
+```bash
+./tools/update-oui.sh                 # download from IEEE
+./tools/update-oui.sh path/to/oui.txt # or use a local copy
+```
+
 ## Roadmap
 Current development status and planned features:
 
